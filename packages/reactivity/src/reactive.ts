@@ -26,6 +26,9 @@ export function reactive(target) {
 
   const proxy = new Proxy(target, {
     get(target, key, receiver) {
+      if (key === ReactiveFlags.IS_REACTIVE) {
+        return true;
+      }
       // 去代理对象上取值 使用get
       // return target[key];  这种方式this指向有问题
       console.log(key);
@@ -53,20 +56,5 @@ export function reactive(target) {
 //     return this.name;
 //   },
 // };
-// // 并没有重新定义属性，只是代理，在取值的时候会调用get，赋值时会调用set
-// const proxy = new Proxy(target, {
-//   get(target, key, receiver) {
-//     // 去代理对象上取值 使用get
-//     // return target[key];  这种方式this指向有问题
-//     console.log(key);
-//     return Reflect.get(target, key, receiver);
-//     // Proxy要配合Reflect使用，保证this指向正确
-//     // Reflect的recerver参数使this指向代理对象
-//   },
-//   set(target, key, value, receiver) {
-//     // 去代理上设置值 使用set
-//     // target[key] = value;
-//     // return true;
-//     return Reflect.set(target, key, value, receiver);
-//   },
-// });
+// let proxy = reactive(target);
+// proxy.alias;
