@@ -22,7 +22,7 @@ export function reactive(target) {
     return existingProxy;
   }
   // 第一次普通对象代理，会通过new Proxy代理一次
-  // 下一次传入proxy对象，为了检测是否代理过，可以查看是否有get方法，有的话说明被proxy代理过
+  // 下一次传入proxy对象，为了检测是否代理过，可以查看是否有get方法，有的话说明被proxy代理
 
   const proxy = new Proxy(target, {
     get(target, key, receiver) {
