@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!-- <script src="../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <script>
+      // effect 代表的是副作用函数，如果此函数依赖的数据发生变化，那么就会重新执行此函数
+      // reactive 代表的是响应式数据 proxy
+      const { reactive, effect, ref } = VueReactivity;
+      const state = reactive({
+        name: '张三',
+        age: 18,
+        address: {
+          num: 999,
+        },
+      });
+      console.log(state);
+    </script>
+  </body>
+</html>

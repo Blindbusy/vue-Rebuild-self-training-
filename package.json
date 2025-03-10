@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node scripts/dev.js reactivity -f global"
   },
   "keywords": [],
   "author": "",
@@ -14,7 +14,7 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.1",
     "minimist": "^1.2.8",
     "typescript": "^5.8.2"
   }
