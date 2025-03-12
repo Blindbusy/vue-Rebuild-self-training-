@@ -1,15 +1,12 @@
 import { isObject } from '@vue/shared';
+import { mutableHandlers, ReactiveFlags } from './baseHandler';
 
 // 1.将数据转换成响应式数据,只能做对象类型数据的代理
 const reactiveMap = new WeakMap(); //key只能是对象类型
-const enum ReactiveFlags { //响应式标识
-  // 实现同一个对象代理多次，返回同一个代理对象
-  // 代理对象的代理对象还是之前的代理对象
-  IS_REACTIVE = '__v_isReactive',
-}
+
 export function reactive(target) {
-  if (isObject(target)) {
-    return;
+  if (!isObject(target)) {
+    return target;
   }
   if (target[ReactiveFlags.IS_REACTIVE]) {
     //如果target是代理对象，那么它一定会在这一步中进入get
@@ -24,26 +21,7 @@ export function reactive(target) {
   // 第一次普通对象代理，会通过new Proxy代理一次
   // 下一次传入proxy对象，为了检测是否代理过，可以查看是否有get方法，有的话说明被proxy代理
 
-  const proxy = new Proxy(target, {
-    get(target, key, receiver) {
-      if (key === ReactiveFlags.IS_REACTIVE) {
-        return true;
-      }
-      // 去代理对象上取值 使用get
-      // return target[key];  这种方式this指向有问题
-      console.log(key);
-      // 可以监控到用户取值
-      return Reflect.get(target, key, receiver);
-      // Proxy要配合Reflect使用，保证this指向正确
-      // Reflect的recerver参数使this指向代理对象
-    },
-    set(target, key, value, receiver) {
-      // 去代理上设置值 使用set
-      // target[key] = value;
-      // 可以监控到用户设置值
-      return Reflect.set(target, key, value, receiver);
-    },
-  });
+  const proxy = new Proxy(target, mutableHandlers);
   reactiveMap.set(target, proxy);
   return proxy;
 }
