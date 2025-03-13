@@ -17,7 +17,7 @@ export const mutableHandlers = {
     track(target, 'get', key);
     // 去代理对象上取值 使用get
     // return target[key];  这种方式this指向有问题
-    console.log(key);
+    // console.log(key);
     // 可以监控到用户取值
     const value = Reflect.get(target, key, receiver);
     // 如果获取的值是对象，递归调用 reactive 函数将其转换为响应式对象

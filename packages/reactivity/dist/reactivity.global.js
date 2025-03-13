@@ -26,6 +26,13 @@ var VueReactivity = (() => {
 
   // packages/reactivity/src/effect.ts
   var activeEffect = void 0;
+  function cleanupEffect(effect2) {
+    const { deps } = effect2;
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect2);
+    }
+    effect2.deps.length = 0;
+  }
   var ReactiveEffect = class {
     //实例上新增active属性 默认是激活的
     constructor(fn) {
@@ -43,6 +50,7 @@ var VueReactivity = (() => {
       try {
         this.parent = activeEffect;
         activeEffect = this;
+        cleanupEffect(this);
         return this.fn();
       } finally {
         this.parent = null;
@@ -72,6 +80,16 @@ var VueReactivity = (() => {
       activeEffect.deps.push(dep);
     }
   }
+  function trigger(target, type, key, value, oldValue) {
+    const depsMap = targetMap.get(target);
+    if (!depsMap) return;
+    const effects = depsMap.get(key);
+    effects && effects.forEach((effect2) => {
+      if (effect2 !== activeEffect) {
+        effect2.run();
+      }
+    });
+  }
 
   // packages/shared/src/index.ts
   var isObject = (value) => {
@@ -85,7 +103,6 @@ var VueReactivity = (() => {
         return true;
       }
       track(target, "get", key);
-      console.log(key);
       const value = Reflect.get(target, key, receiver);
       if (isObject(value)) {
         return reactive(value);
@@ -96,9 +113,9 @@ var VueReactivity = (() => {
       let oldValue = target[key];
       let result = Reflect.set(target, key, value, receiver);
       if (oldValue !== value) {
-        trigger(target, key, value, oldValue);
+        trigger(target, "set", key, value, oldValue);
       }
-      return Reflect.set(target, "set", key, value, oldValue);
+      return Reflect.set(target, key, value, receiver);
     }
   };
 

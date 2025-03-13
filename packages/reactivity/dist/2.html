@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="./reactivity.global.js"></script>
+    <div id="app"></div>
+    <script>
+      const { effect, reactive } = VueReactivity;
+      const state = reactive({
+        flag: true,
+        name: 'zf',
+        age: 30,
+      });
+      effect(() => {
+        // 我们期待的是每次执行effect时都可以清理一遍依赖，重新收集
+        console.log('render');
+        document.body.innerHTML = state.flag ? state.name : state.age;
+      });
+      setTimeout(() => {
+        state.flag = false;
+        setTimeout(() => {
+          console.log('修改name，原则上不更新');
+          // 然而当前的effect收集了name的依赖，所以会更新
+          // 此处为bug，也引出了清理副作用的问题
+          state.name = 'kobe';
+        }, 1000);
+      }, 1000);
+    </script>
+  </body>
+</html>
