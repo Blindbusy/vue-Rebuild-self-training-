@@ -19,7 +19,7 @@ class ReactiveEffect {
   // 反向收集effect关联了哪些属性
   public parent = null;
   public active = true; //实例上新增active属性 默认是激活的
-  constructor(public fn) {} // ts的语法，用户传递的参数也会挂到this上
+  constructor(public fn, public scheduler) {} // ts的语法，用户传递的参数也会挂到this上
   run() {
     // 此处表示非激活的情况，只执行函数，不进行依赖收集
     if (!this.active) {
@@ -42,12 +42,23 @@ class ReactiveEffect {
       activeEffect = this.parent;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      cleanupEffect(this);
+      // 停止effect的收集
+    }
+  }
 }
 
-export function effect(fn) {
+export function effect(fn, options: any = {}) {
   // 这里fn可以根据状态变化，重新执行，effect可以嵌套写
-  const _effect = new ReactiveEffect(fn); // 创建响应式的effect
+  const _effect = new ReactiveEffect(fn, options.scheduler); // 创建响应式的effect
   _effect.run(); // 默认先执行一次
+  const runner = _effect.run.bind(_effect);
+  // 通过bind绑定this始终为_effect
+  runner.effect = _effect; // 将effect实例挂载到runner上
+  return runner;
 }
 
 // 一个effect对应多个属性，一个属性对应多个effect
@@ -92,7 +103,13 @@ export function trigger(target, type, key, value, oldValue) {
     effects.forEach((effect) => {
       if (effect !== activeEffect) {
         // 在执行effect的时候，又要执行自身，那就需要屏蔽掉，不要无限调用
-        effect.run();
+        if (effect.scheduler) {
+          // 如果用户传入了调度器，那么就调用用户的调度器
+          effect.scheduler();
+        } else {
+          // 否则就默认执行effect
+          effect.run();
+        }
       }
     });
   }

@@ -35,8 +35,9 @@ var VueReactivity = (() => {
   }
   var ReactiveEffect = class {
     //实例上新增active属性 默认是激活的
-    constructor(fn) {
+    constructor(fn, scheduler) {
       this.fn = fn;
+      this.scheduler = scheduler;
       this.deps = [];
       // 反向收集effect关联了哪些属性
       this.parent = null;
@@ -57,10 +58,19 @@ var VueReactivity = (() => {
         activeEffect = this.parent;
       }
     }
+    stop() {
+      if (this.active) {
+        this.active = false;
+        cleanupEffect(this);
+      }
+    }
   };
-  function effect(fn) {
-    const _effect = new ReactiveEffect(fn);
+  function effect(fn, options = {}) {
+    const _effect = new ReactiveEffect(fn, options.scheduler);
     _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
   }
   var targetMap = /* @__PURE__ */ new WeakMap();
   function track(target, type, key) {
@@ -88,7 +98,11 @@ var VueReactivity = (() => {
       effects = new Set(effects);
       effects.forEach((effect2) => {
         if (effect2 !== activeEffect) {
-          effect2.run();
+          if (effect2.scheduler) {
+            effect2.scheduler();
+          } else {
+            effect2.run();
+          }
         }
       });
     }
