@@ -82,16 +82,20 @@ export function trigger(target, type, key, value, oldValue) {
   const depsMap = targetMap.get(target);
   if (!depsMap) return;
   // 触发的值不在模板中使用，不需要触发
-  const effects = depsMap.get(key);
+  let effects = depsMap.get(key);
   // effects是一个set类型数据，包含所有与当前属性key相关联的effect
   // 找到对应的effect
-  effects &&
+  if (effects) {
+    effects = new Set(effects);
+    // 此处将原有的effects拷贝了一份到新的内存地址
+    // 这样在清理并重新收集effects时就不会出现死循环
     effects.forEach((effect) => {
       if (effect !== activeEffect) {
         // 在执行effect的时候，又要执行自身，那就需要屏蔽掉，不要无限调用
         effect.run();
       }
     });
+  }
 }
 // --effect是vue一个非常核心的api，它是compute、watch、组件...的基础
 // 1)我们先搞了一个响应式对象通过new Proxy实现
