@@ -14,7 +14,7 @@ function cleanupEffect(effect) {
   effect.deps.length = 0; //清空effect中的响应式数据
 }
 
-class ReactiveEffect {
+export class ReactiveEffect {
   public deps = [];
   // 反向收集effect关联了哪些属性
   public parent = null;
@@ -79,14 +79,20 @@ export function track(target, type, key) {
   if (!dep) {
     depsMap.set(key, (dep = new Set()));
   }
-  let shouldTrack = !dep.has(activeEffect);
-  // 如果dep中有没有activeEffect，那么就需要收集了，实现去重
-  if (shouldTrack) {
-    dep.add(activeEffect);
-    activeEffect.deps.push(dep); // 让effect记录dep，稍后清理的时候会用到
+  trackEffects(dep);
+}
+
+export function trackEffects(dep) {
+  if (activeEffect) {
+    let shouldTrack = !dep.has(activeEffect);
+    // 如果dep中有没有activeEffect，那么就需要收集了，实现去重
+    if (shouldTrack) {
+      dep.add(activeEffect);
+      activeEffect.deps.push(dep); // 让effect记录dep，稍后清理的时候会用到
+    }
+    // 对象的某个属性-> 多个effect
+    // weakMap={对象：map:{属性：set}}，set实现去重
   }
-  // 对象的某个属性-> 多个effect
-  // weakMap={对象：map:{属性：set}}，set实现去重
 }
 
 export function trigger(target, type, key, value, oldValue) {
@@ -97,22 +103,25 @@ export function trigger(target, type, key, value, oldValue) {
   // effects是一个set类型数据，包含所有与当前属性key相关联的effect
   // 找到对应的effect
   if (effects) {
-    effects = new Set(effects);
-    // 此处将原有的effects拷贝了一份到新的内存地址
-    // 这样在清理并重新收集effects时就不会出现死循环
-    effects.forEach((effect) => {
-      if (effect !== activeEffect) {
-        // 在执行effect的时候，又要执行自身，那就需要屏蔽掉，不要无限调用
-        if (effect.scheduler) {
-          // 如果用户传入了调度器，那么就调用用户的调度器
-          effect.scheduler();
-        } else {
-          // 否则就默认执行effect
-          effect.run();
-        }
-      }
-    });
   }
+}
+
+export function triggerEffects(effects) {
+  effects = new Set(effects);
+  // 此处将原有的effects拷贝了一份到新的内存地址
+  // 这样在清理并重新收集effects时就不会出现死循环
+  effects.forEach((effect) => {
+    if (effect !== activeEffect) {
+      // 在执行effect的时候，又要执行自身，那就需要屏蔽掉，不要无限调用
+      if (effect.scheduler) {
+        // 如果用户传入了调度器，那么就调用用户的调度器
+        effect.scheduler();
+      } else {
+        // 否则就默认执行effect
+        effect.run();
+      }
+    }
+  });
 }
 // --effect是vue一个非常核心的api，它是compute、watch、组件...的基础
 // 1)我们先搞了一个响应式对象通过new Proxy实现
