@@ -6,9 +6,20 @@
     <title>Document</title>
   </head>
   <body>
-    <script src="./reactivity.global.js"></script>
+    <script src="../../../node_modules/vue/dist/vue.global.js"></script>
     <script>
-      const { effect, reactive } = VueReactivity;
+      // debugger;
+      const A = () => {
+        let a = 0;
+        return () => {
+          a++;
+          console.log(a);
+        };
+      };
+      for (let i = 0; i < 10; i++) {
+        const t = A();
+        t();
+      }
     </script>
   </body>
 </html>

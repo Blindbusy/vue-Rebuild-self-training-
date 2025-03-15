@@ -26,11 +26,19 @@ export function watch(source, cb) {
     // 递归循环，访问对象的每一个属性，访问属性时收集effect
     getter = () => traversal(source);
   }
+  let cleanup;
+  const oncleanup = (fn) => {
+    cleanup = fn;
+    // 保存用户传入的回调函数
+    // 留在下一次触发watch时调用
+  };
   let oldValue;
   const job = () => {
+    if (cleanup) cleanup();
+    // 下一次watch开始触发时，触发上一次watch的清理
     const newValue = effect.run();
     // 数据变化后执行用户传入的回调函数
-    cb(newValue, oldValue);
+    cb(newValue, oldValue, oncleanup);
     oldValue = newValue;
     // 这里更新旧值为新值为下一次变化做准备
   };
@@ -39,3 +47,5 @@ export function watch(source, cb) {
   // 监控自己构造的函数，变化后重新执行job
   oldValue = effect.run();
 }
+
+// watch=effect 内部会保存老值和新值 调用方法
