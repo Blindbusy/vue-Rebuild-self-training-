@@ -123,8 +123,10 @@ export function triggerEffects(effects) {
     }
   });
 }
-// --effect是vue一个非常核心的api，它是compute、watch、组件...的基础
+// --effect是vue一个非常核心的api，它是computed、watch、组件...的基础
 // 1)我们先搞了一个响应式对象通过new Proxy实现
 // 2)effect默认数据变化要能够更新，我们现将正在执行的effect作为全局变量存储，渲染（取值），然后在get方法中收集依赖
 // 3)定义关联响应式数据和依赖的数据结构 (对象<-->键值<-->依赖) WeakMap（对象：Map（键值：set（存储依赖）））
 // 4)稍后用户数据发生变化时，会通过对象的属性来查找对应的effect集合(set类型数据)，找到后全部执行
+
+// 5)注意：如果对于数组，源码中对length的变化也是可以监听到的，但是目前的代码中没有做处理
