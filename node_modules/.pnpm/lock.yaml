@@ -24,6 +24,10 @@ importers:
 
   packages/reactivity: {}
 
+  packages/runtime-core: {}
+
+  packages/runtime-dom: {}
+
   packages/shared: {}
 
 packages:
