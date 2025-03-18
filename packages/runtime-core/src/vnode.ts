@@ -1,4 +1,6 @@
 import { isArray, isString } from '@vue/shared';
+export const Text = Symbol('Text');
+// 文本类型,对应patch方法中直接用文本创建元素的情况
 
 export function isVnode(value) {
   return !!(value && value.__v_isVnode); //双叹号强制转换布尔类型

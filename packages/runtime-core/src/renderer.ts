@@ -1,4 +1,5 @@
-import { ShapeFlags } from './vnode';
+import { isString } from '@vue/shared';
+import { createVnode, ShapeFlags } from './vnode';
 
 export function createRenderer(renderOptions) {
   let {
@@ -13,8 +14,16 @@ export function createRenderer(renderOptions) {
     patchProp: hostPatchProp,
   } = renderOptions;
 
+  const normalize = (child) => {
+    if (isString(child)) {
+      return createVnode(Text, null, child);
+    }
+    return child;
+  };
+
   function mountChildren(children, container) {
     for (let i = 0; i < children.length; i++) {
+      let child = normalize(children[i]);
       patch(null, children[i], container);
     }
   }
@@ -46,29 +55,63 @@ export function createRenderer(renderOptions) {
     // 3.将元素插入到容器中 完成初始化渲染
     hostInsert(el, container);
   }
+
+  const processText = (n1, n2, container) => {
+    if (n1 == null) {
+      hostInsert((n2.el = hostCreateText(n2.children)), container);
+    }
+  };
+
   // 核心的patch方法
   const patch = (n1, n2, container) => {
     // n2可能是一个string 是文本
     if (n1 == n2) return;
+
+    const { type, shapeFlag } = n2;
     if (n1 == null) {
       // 初次渲染
       // 后续还有组件的初次渲染，目前是元素初始化渲染
+      switch (type) {
+        case Text: // 实际就是将文本包装成对象 方便渲染
+          processText(n1, n2, container);
+          break;
+        default:
+          if (shapeFlag & ShapeFlags.ELEMENT) {
+            mountElement(n2, container);
+          }
+      }
       mountElement(n2, container);
     } else {
       // 更新流程
     }
   };
+
+  // 卸载dom
+  const unmount = (vnode) => {
+    hostRemove(vnode.el);
+    // 回忆一下，vnode.el用做真实节点的缓存
+    // 此处删除掉的是真实节点
+  };
+
   // 渲染过程由传入的renderOptions来实现
   const render = (vnode, container) => {
     if (vnode == null) {
       // 卸载逻辑
+      if (container._vnode) {
+        // 如果确实渲染过了，那就卸载dom
+        unmount(container._vnode);
+      }
     } else {
       // 这里既有初始化的逻辑，又有更新的逻辑
       patch(null, vnode, container);
     }
     container._vnode = vnode;
+    //  如果当前vnode是空的话
   };
   return {
     render,
   };
 }
+// 文本的传入，需要自行增加类型
+// 因为不能通过document.createElement('文本')创建节点
+// 如果传入的是null，则代表要卸载DOM，执行卸载逻辑删除DOM节点

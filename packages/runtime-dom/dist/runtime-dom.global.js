@@ -20,8 +20,12 @@ var VueRuntimeDOM = (() => {
   // packages/runtime-dom/src/index.ts
   var index_exports = {};
   __export(index_exports, {
+    ShapeFlags: () => ShapeFlags,
+    Text: () => Text3,
     createRenderer: () => createRenderer,
+    createVnode: () => createVnode,
     h: () => h2,
+    isVnode: () => isVnode,
     render: () => render
   });
 
@@ -2580,7 +2584,7 @@ var VueRuntimeDOM = (() => {
     }
   }
   var Fragment = Symbol.for("v-fgt");
-  var Text = Symbol.for("v-txt");
+  var Text2 = Symbol.for("v-txt");
   var Comment = Symbol.for("v-cmt");
   var Static = Symbol.for("v-stc");
   var currentBlock = null;
@@ -2790,7 +2794,7 @@ Component that was made reactive: `,
     return cloned;
   }
   function createTextVNode(text = " ", flag = 0) {
-    return createVNode(Text, null, text, flag);
+    return createVNode(Text2, null, text, flag);
   }
   function normalizeChildren(vnode, children) {
     let type = 0;
@@ -3259,15 +3263,6 @@ Component that was made reactive: `,
     }
   }
 
-  // packages/runtime-core/src/renderer.ts
-  function createRenderer(renderOptions2) {
-    const render2 = (vnode, container) => {
-    };
-    return {
-      render: render2
-    };
-  }
-
   // packages/shared/src/index.ts
   var isObject2 = (value) => {
     return typeof value === "object" && value !== null;
@@ -3278,6 +3273,7 @@ Component that was made reactive: `,
   var isArray2 = Array.isArray;
 
   // packages/runtime-core/src/vnode.ts
+  var Text3 = Symbol("Text");
   function isVnode(value) {
     return !!(value && value.__v_isVnode);
   }
@@ -3303,6 +3299,87 @@ Component that was made reactive: `,
         type2 = 8 /* TEXT_CHILDREN */;
       }
     }
+  }
+  var ShapeFlags = /* @__PURE__ */ ((ShapeFlags2) => {
+    ShapeFlags2[ShapeFlags2["ELEMENT"] = 1] = "ELEMENT";
+    ShapeFlags2[ShapeFlags2["FUNCTIONAL_COMPONENT"] = 2] = "FUNCTIONAL_COMPONENT";
+    ShapeFlags2[ShapeFlags2["STATEFUL_COMPONENT"] = 4] = "STATEFUL_COMPONENT";
+    ShapeFlags2[ShapeFlags2["TEXT_CHILDREN"] = 8] = "TEXT_CHILDREN";
+    ShapeFlags2[ShapeFlags2["ARRAY_CHILDREN"] = 16] = "ARRAY_CHILDREN";
+    ShapeFlags2[ShapeFlags2["SLOTS_CHILDREN"] = 32] = "SLOTS_CHILDREN";
+    ShapeFlags2[ShapeFlags2["TELEPORT"] = 64] = "TELEPORT";
+    ShapeFlags2[ShapeFlags2["SUSPENSE"] = 128] = "SUSPENSE";
+    ShapeFlags2[ShapeFlags2["COMPONENT_SHOULD_KEEP_ALIVE"] = 256] = "COMPONENT_SHOULD_KEEP_ALIVE";
+    ShapeFlags2[ShapeFlags2["COMPONENT_KEPT_ALIVE"] = 512] = "COMPONENT_KEPT_ALIVE";
+    ShapeFlags2[ShapeFlags2["COMPONENT"] = 6] = "COMPONENT";
+    return ShapeFlags2;
+  })(ShapeFlags || {});
+
+  // packages/runtime-core/src/renderer.ts
+  function createRenderer(renderOptions2) {
+    let {
+      insert: hostInsert,
+      remove: hostRemove,
+      setElementText: hostSetElementText,
+      setText: hostSetText,
+      parentNode: hostParentNode,
+      nextSibling: hostNextSibling,
+      createElement: hostCreateElement,
+      createText: hostCreateText,
+      patchProp: hostPatchProp
+    } = renderOptions2;
+    function mountChildren(children, container) {
+      for (let i = 0; i < children.length; i++) {
+        patch(null, children[i], container);
+      }
+    }
+    function mountElement(vnode, container) {
+      let { type, props, children, shapeFlag } = vnode;
+      let el = vnode.el = hostCreateElement(type);
+      if (props) {
+        for (let key in props) {
+          hostPatchProp(el, key, null, props[key]);
+        }
+      }
+      if (shapeFlag & 8 /* TEXT_CHILDREN */) {
+        hostSetElementText(el, children);
+      } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+        mountChildren(children, el);
+      }
+      hostInsert(el, container);
+    }
+    const processText = (n1, n2, container) => {
+      if (n1 == null) {
+        hostInsert(n2.el = hostCreateText(n2.children), container);
+      }
+    };
+    const patch = (n1, n2, container) => {
+      if (n1 == n2) return;
+      const { type, shapeFlag } = n2;
+      if (n1 == null) {
+        switch (type) {
+          case Text:
+            processText(n1, n2, container);
+            break;
+          default:
+            if (shapeFlag & 1 /* ELEMENT */) {
+              mountElement(n2, container);
+            }
+        }
+        mountElement(n2, container);
+      } else {
+      }
+    };
+    const render2 = (vnode, container) => {
+      if (vnode == null) {
+      } else {
+        patch(null, vnode, container);
+      }
+      container._vnode = vnode;
+    };
+    return {
+      render: render2
+    };
   }
 
   // packages/runtime-core/src/h.ts
