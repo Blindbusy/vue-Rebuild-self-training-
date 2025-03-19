@@ -14,16 +14,18 @@ export function createRenderer(renderOptions) {
     patchProp: hostPatchProp,
   } = renderOptions;
 
-  const normalize = (child) => {
-    if (isString(child)) {
-      return createVnode(Text, null, child);
+  const normalize = (children, i) => {
+    if (isString(children[i])) {
+      let vnode = createVnode(Text, null, children[i]);
+      children[i] = vnode;
     }
-    return child;
+    return children[i];
   };
 
   function mountChildren(children, container) {
     for (let i = 0; i < children.length; i++) {
-      let child = normalize(children[i]);
+      let child = normalize(children, i);
+      // 处理后需要替换，否则children中存放的已经是字符串
       patch(null, child, container);
     }
   }
@@ -68,17 +70,100 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  function patchProps(oldProps, newProps, el) {
+    for (let key in newProps) {
+      if (key === 'style') {
+        hostPatchProp(el, key, oldProps[key], newProps[key]);
+        // 完成新样式对已有的样式的覆盖
+        // 并添加新增的原来没有的样式
+      }
+      for (let key in oldProps) {
+        // 旧的有新的没有的属性，则删除
+        if (newProps[key] == null) {
+          hostPatchProp(el, key, oldProps[key], null);
+        }
+      }
+    }
+  }
+  const unmountChildren = (children) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i]);
+    }
+  };
+  const patchChildren = (n1, n2, el) => {
+    // 比较两个虚拟节点的孩子的差异，el为当前的父节点
+    const c1 = n1.children;
+    const c2 = n2.children;
+    const prevShapeFlag = n1.shapeFlag; // 之前的
+    const shapeFlag = n2.shapeFlag; // 现在的
+    // 孩子可能是 文本 null 数组
+    // 下面比较两个孩子的差异 Diff算法
+    // 子元素的比较情况：
+    // 新         旧         操作方式
+    // 文本       数组       删除旧的，设置新文本内容
+    // 文本       文本       更新文本内容
+    // 文本       null      同上
+    // 数组       数组       Diff算法 比较复杂
+    // 数组       文本       删除旧的，挂载新的
+    // 数组       null       同上
+    // null       数组       删除所有子节点
+    // null       文本       清空文本
+    // null       null      不做任何操作
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 旧的是数组，现在是文本
+        unmountChildren(n1.children);
+        // 文本       数组       删除旧的，设置新文本内容
+      }
+      if (c1 !== c2) {
+        hostSetElementText(el, c2);
+        // 文本       文本       更新文本内容
+        // 文本       null      同上
+      }
+    } else {
+      // 现在是数组或者空
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // 数组       数组       Diff算法 比较复杂
+          // patchKeyedChildren(c1, c2, el);
+        } else {
+          // null       数组       删除所有子节点
+          unmountChildren(c1);
+        }
+      } else {
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          // 数组       文本       删除旧的，挂载新的
+          // null       文本       清空文本
+          hostSetElementText(el, '');
+        }
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          mountChildren(c2, el);
+          // 数组       文本       删除旧的，挂载新的
+        }
+      }
+    }
+  };
+
+  const patchElement = (n1, n2) => {
+    // 先复用节点、再比较属性、再比较孩子节点
+    let el = (n2.el = n1.el);
+    let oldProps = n1.props || {};
+    let newProps = n2.props || {};
+    patchProps(oldProps, newProps, el);
+    patchChildren(n1, n2, el);
+  };
+
   const processElement = (n1, n2, container) => {
     if (n1 == null) {
       mountElement(n2, container);
     } else {
       // 此处是更新逻辑 也就是Diff算法部分
-      // patchElement(n1, n2, container);
+      patchElement(n1, n2);
     }
   };
 
   // 核心的patch方法
-  const patch = (n1, n2, container) => {
+  function patch(n1, n2, container) {
     // n2可能是一个string 是文本
     if (n1 == n2) return;
     if (n1 && !isSameVnode(n1, n2)) {
@@ -103,14 +188,14 @@ export function createRenderer(renderOptions) {
     // } else {
     //   // 更新流程 也就是DIFF算法
     // }
-  };
+  }
 
   // 卸载dom
-  const unmount = (vnode) => {
+  function unmount(vnode) {
     hostRemove(vnode.el);
     // 回忆一下，vnode.el用做真实节点的缓存
     // 此处删除掉的是真实节点
-  };
+  }
 
   // 渲染过程由传入的renderOptions来实现
   const render = (vnode, container) => {
