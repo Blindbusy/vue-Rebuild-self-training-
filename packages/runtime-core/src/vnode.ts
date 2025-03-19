@@ -5,6 +5,12 @@ export const Text = Symbol('Text');
 export function isVnode(value) {
   return !!(value && value.__v_isVnode); //双叹号强制转换布尔类型
 }
+
+export function isSameVnode(n1, n2) {
+  // 判断两个虚拟节点是否相同，需要判断标签名和key都相同
+  return n1.type === n2.type && n1.key === n2.key;
+}
+
 // 虚拟节点有很多种类：组件的、元素的、文本的...
 export function createVnode(type, props, children = null) {
   // 组合方案 shapeFlag 要判断一个元素中包含一个子元素还是多个子元素

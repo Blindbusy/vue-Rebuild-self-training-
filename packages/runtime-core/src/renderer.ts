@@ -1,5 +1,5 @@
 import { isString } from '@vue/shared';
-import { createVnode, ShapeFlags } from './vnode';
+import { createVnode, isSameVnode, ShapeFlags } from './vnode';
 
 export function createRenderer(renderOptions) {
   let {
@@ -24,7 +24,7 @@ export function createRenderer(renderOptions) {
   function mountChildren(children, container) {
     for (let i = 0; i < children.length; i++) {
       let child = normalize(children[i]);
-      patch(null, children[i], container);
+      patch(null, child, container);
     }
   }
 
@@ -59,6 +59,21 @@ export function createRenderer(renderOptions) {
   const processText = (n1, n2, container) => {
     if (n1 == null) {
       hostInsert((n2.el = hostCreateText(n2.children)), container);
+    } else {
+      // 文本变化复用老节点
+      const el = (n2.el = n1.el);
+      if (n1.children !== n2.children) {
+        hostSetText(el, n2.children); // 文本更新
+      }
+    }
+  };
+
+  const processElement = (n1, n2, container) => {
+    if (n1 == null) {
+      mountElement(n2, container);
+    } else {
+      // 此处是更新逻辑 也就是Diff算法部分
+      // patchElement(n1, n2, container);
     }
   };
 
@@ -66,24 +81,28 @@ export function createRenderer(renderOptions) {
   const patch = (n1, n2, container) => {
     // n2可能是一个string 是文本
     if (n1 == n2) return;
-
-    const { type, shapeFlag } = n2;
-    if (n1 == null) {
-      // 初次渲染
-      // 后续还有组件的初次渲染，目前是元素初始化渲染
-      switch (type) {
-        case Text: // 实际就是将文本包装成对象 方便渲染
-          processText(n1, n2, container);
-          break;
-        default:
-          if (shapeFlag & ShapeFlags.ELEMENT) {
-            mountElement(n2, container);
-          }
-      }
-      mountElement(n2, container);
-    } else {
-      // 更新流程
+    if (n1 && !isSameVnode(n1, n2)) {
+      unmount(n1); // 卸载旧的
+      n1 = null; // 将n1置空，之后的判断条件就不会进入更新而是创建
     }
+    const { type, shapeFlag } = n2;
+
+    switch (type) {
+      case Text: // 实际就是将文本包装成对象 方便渲染
+        processText(n1, n2, container);
+        break;
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container);
+        }
+    }
+
+    // if (n1 == null) {
+    //   // 初次渲染
+    //   // 后续还有组件的初次渲染，目前是元素初始化渲染
+    // } else {
+    //   // 更新流程 也就是DIFF算法
+    // }
   };
 
   // 卸载dom
