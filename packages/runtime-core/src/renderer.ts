@@ -122,6 +122,7 @@ export function createRenderer(renderOptions) {
       e1--;
       e2--;
     }
+    // 有一方全部比较完了，要么添加，要么删除
     // i比e1大，说明c1已经遍历完了，c2还有剩余，要新增
     // i和e2中间的部分是新增的部分
     if (i > e1) {
@@ -131,7 +132,15 @@ export function createRenderer(renderOptions) {
         while (i <= e2) {
           const nextPos = e2 + 1;
           const anchor = nextPos < c2.length ? c2[nextPos].el : null;
-          patch(null, c2[i], el, anchor);
+          patch(null, c2[i], el, anchor); //创建新节点，放到容器中
+          i++;
+        }
+      }
+    } else if (i > e2) {
+      // 卸载部分
+      if (i <= e1) {
+        while (i <= e1) {
+          unmount(c1[i]);
           i++;
         }
       }
