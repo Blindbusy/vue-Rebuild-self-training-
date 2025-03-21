@@ -26,7 +26,7 @@ export const mutableHandlers = {
     }
     return value;
     // Proxy要配合Reflect使用，保证this指向正确
-    // Reflect的recerver参数使this指向代理对象
+    // Reflect的receiver参数使this指向代理对象
   },
   set(target, key, value, receiver) {
     // 去代理上设置值 使用set
