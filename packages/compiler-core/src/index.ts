@@ -16,10 +16,12 @@ function isEnd(context) {
 }
 
 function getCursor(context) {
+  // 获取偏移量信息（位置信息）
   let { line, column, offset } = context;
   return { line, column, offset };
 }
 
+// 更新信息
 function advancePositionWithMutation(context, source, endIndex) {
   let linesCount = 0;
   let linePos = -1;
@@ -43,12 +45,14 @@ function advanceBy(context, endIndex) {
   context.source = context.source.slice(endIndex);
 }
 
+// 处理文本内容，更新最新的偏移量信息
 function parseTextData(context, endIndex) {
   const rawText = context.source.slice(0, endIndex); // 截取到结束的位置
   advanceBy(context, rawText.length);
   return rawText;
 }
 
+// 获取当前开始和结尾的位置信息
 function getSelection(context, start, end?) {
   end = end || getCursor(context);
   return {
@@ -82,6 +86,21 @@ function parseText(context) {
   };
 }
 
+// 处理插值表达式信息
+function parseInterpolation(context) {
+  const start = getCursor(context); // {{ }}
+  const closeIndex = context.source.indexOf('}}', '{{');
+  // 查找结束的大括号
+  advanceBy(context, 2);
+  const innerStart = getCursor(context);
+  const innerEnd = getCursor(context);
+  const rawContentLength = closeIndex - 2; // 原始内容长度
+  let content = parseTextData(context, rawContentLength);
+  // 返回文本内容并更新信息
+  content.trim();
+  advanceBy(context, 2);
+}
+
 function parse(template) {
   // 创建一个解析的上下文来进行处理
   const context = createParserContext(template);
@@ -93,7 +112,7 @@ function parse(template) {
     const source = context.source;
     let node;
     if (source.startsWith('{{')) {
-      node = 'xxx';
+      node = parseInterpolation(context);
     } else if (source[0] === '<') {
       node = 'qqq';
     }
